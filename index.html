@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador cualquier ubicacion en República Dominicana</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            background-color: #F0F0F0; /* Fondo gris claro para resaltar los colores de la bandera */
+        }
+        #searchSection {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+            border: 2px solid #0048BA; /* Azul de la bandera */
+            border-radius: 10px;
+            background-color: #ffffff; /* Fondo blanco */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        #searchSection h2 {
+            color: #D72828; /* Rojo de la bandera */
+            margin-bottom: 20px;
+        }
+        #searchSection input {
+            width: 300px;
+            padding: 12px;
+            margin-bottom: 15px;
+            font-size: 16px;
+            border: 2px solid #0048BA; /* Azul de la bandera */
+            border-radius: 5px;
+        }
+        #searchSection button {
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #D72828; /* Rojo de la bandera */
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        #searchSection button:hover {
+            background-color: #B22222; /* Rojo más oscuro al pasar el ratón */
+        }
+        #map {
+            display: none;
+            height: 100vh;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="searchSection">
+        <h2>Buscador cualquier ubicacion en República Dominicana</h2>
+        <input type="text" id="searchQuery" placeholder="Ingrese donde quiere ir ...">
+        <button onclick="searchPlaces()">Buscar</button>
+    </div>
+    <div id="map"></div>
+
+    <script>
+        let map;
+        let service;
+        let infowindow;
+        let markers = [];
+
+        function initMap() {
+            const dominicanRepublic = { lat: 18.7357, lng: -70.1627 };  // Coordenadas aproximadas del centro de República Dominicana
+
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 8,
+                center: dominicanRepublic  // Centrando el mapa en República Dominicana
+            });
+
+            infowindow = new google.maps.InfoWindow();
+            service = new google.maps.places.PlacesService(map);
+        }
+
+        function searchPlaces() {
+            const query = document.getElementById('searchQuery').value.trim();
+            if (!query) {
+                alert('Por favor, ingresa un término de búsqueda.');
+                return;
+            }
+
+            if (!map) {
+                initMap();
+            }
+
+            const dominicanRepublicBounds = {
+                north: 20.0875,
+                south: 17.5475,
+                west: -72.0075,
+                east: -68.3225
+            };
+
+            const request = {
+                query: query,
+                location: map.getCenter(),
+                radius: '50000',  // Radio en metros
+                region: 'DO',  // Específicamente República Dominicana
+                bounds: dominicanRepublicBounds  // Limitar la búsqueda a los límites de República Dominicana
+            };
+
+            service.textSearch(request, (results, status) => {
+                if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+                    clearMarkers();
+                    results.forEach(place => createMarker(place));
+                    map.setCenter(results[0].geometry.location);
+                    document.getElementById('map').style.display = 'block';
+                    document.getElementById('searchSection').style.display = 'none';
+                } else {
+                    alert('No se encontraron resultados o hubo un error en la búsqueda.');
+                    console.error('Error en la búsqueda:', status);
+                }
+            });
+        }
+
+        function createMarker(place) {
+            const marker = new google.maps.Marker({
+                map: map,
+                position: place.geometry.location
+            });
+            markers.push(marker);
+
+            google.maps.event.addListener(marker, 'click', function () {
+                service.getDetails({ placeId: place.place_id }, (placeDetails, status) => {
+                    if (status === google.maps.places.PlacesServiceStatus.OK) {
+                        const content = `
+                            <h3>${placeDetails.name}</h3>
+                            <p>${placeDetails.formatted_address}</p>
+                            <p><strong>Rating:</strong> ${placeDetails.rating} (${placeDetails.user_ratings_total} reviews)</p>
+                            <p><strong>Horario:</strong> ${placeDetails.opening_hours ? placeDetails.opening_hours.weekday_text.join(', ') : 'No disponible'}</p>
+                            <p><strong>Teléfono:</strong> ${placeDetails.formatted_phone_number || 'No disponible'}</p>
+                        `;
+                        infowindow.setContent(content);
+                        infowindow.open(map, marker);
+                    }
+                });
+            });
+        }
+
+        function clearMarkers() {
+            markers.forEach(marker => marker.setMap(null));
+            markers = [];
+        }
+    </script>
+    <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB41DRUbKWJHPxaFjMAwdrzWzbVKartNGg&libraries=places&callback=initMap"></script>
+</body>
+</html>
